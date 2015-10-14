@@ -1,4 +1,4 @@
-defmodule Chat.Socket do
+defmodule Api.Socket do
 
   def start_link(ws, name) do
     Agent.start_link(fn -> ws end, name: String.to_atom(name))

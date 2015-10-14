@@ -1,8 +1,8 @@
-defmodule Chat.Mixfile do
+defmodule Api.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :chat,
+    [app: :api,
      version: "0.0.1",
      elixir: "~> 1.0",
      elixirc_paths: ["lib", "web"],
@@ -15,7 +15,7 @@ defmodule Chat.Mixfile do
   # Type `mix help compile.app` for more information
   def application do
     [
-      mod: {Chat, []},
+      mod: {Api, []},
       applications: [:phoenix, :phoenix_html, :cowboy, :logger, :amqp, :httpotion] # , :kafka_ex, :snappy
    ]
   end

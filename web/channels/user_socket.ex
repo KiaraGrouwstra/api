@@ -1,10 +1,10 @@
-defmodule Chat.UserSocket do
+defmodule Api.UserSocket do
   use Phoenix.Socket
 
-  channel "rooms:*", Chat.RoomChannel
+  channel "rooms:*", Api.RoomChannel
 
   transport :websocket, Phoenix.Transports.WebSocket
-  transport :longpoll, Phoenix.Transports.LongPoll
+  # transport :longpoll, Phoenix.Transports.LongPoll
 
   def connect(_params, socket) do
     {:ok, socket}

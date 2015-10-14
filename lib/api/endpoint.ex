@@ -1,13 +1,12 @@
-defmodule Chat.Endpoint do
-  use Phoenix.Endpoint, otp_app: :chat
+defmodule Api.Endpoint do
+  use Phoenix.Endpoint, otp_app: :api
 
-  socket "/socket", Chat.UserSocket
-
+  socket "/socket", Api.UserSocket
 
   # Serve at "/" the given assets from "priv/static" directory
-  plug Plug.Static,
-    at: "/", from: :chat,
-    only: ~w(css images js favicon.ico robots.txt)
+  # plug Plug.Static,
+  #   at: "/", from: :api,
+  #   only: ~w(css images js favicon.ico robots.txt)
 
   # Code reloading will only work if the :code_reloader key of
   # the :phoenix application is set to true in your config file.
@@ -16,7 +15,6 @@ defmodule Chat.Endpoint do
     plug Phoenix.CodeReloader
     plug Phoenix.LiveReloader
   end
-
 
   plug Plug.Logger
 
@@ -30,9 +28,9 @@ defmodule Chat.Endpoint do
 
   plug Plug.Session,
     store: :cookie,
-    key: "_chat_key",
+    key: "_api_key",
     signing_salt: "LH6XmqGb",
     encryption_salt: "CIPZg4Qo"
 
-  plug Chat.Router
+  plug Api.Router
 end

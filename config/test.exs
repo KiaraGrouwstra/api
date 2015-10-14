@@ -2,7 +2,7 @@ use Mix.Config
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
-config :chat, Chat.Endpoint,
+config :api, Api.Endpoint,
   http: [port: 4001],
   server: false
 
@@ -10,10 +10,10 @@ config :chat, Chat.Endpoint,
 config :logger, level: :warn
 
 # Configure your database
-config :chat, Chat.Repo,
+config :api, Api.Repo,
   adapter: Ecto.Adapters.Postgres,
   username: "postgres",
   password: "postgres",
-  database: "chat_test",
+  database: "api_test",
   size: 1,
   max_overflow: false

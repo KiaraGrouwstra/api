@@ -1,23 +1,11 @@
-defmodule Chat.Web do
-  @moduledoc """
-  A module that keeps using definitions for controllers,
-  views and so on.
-
-  This can be used in your application as:
-
-      use Chat.Web, :controller
-      use Chat.Web, :view
-
-  Keep the definitions in this module short and clean,
-  mostly focused on imports, uses and aliases.
-  """
+defmodule Api.Web do
 
   def view do
     quote do
       use Phoenix.View, root: "web/templates"
 
       # Import URL helpers from the router
-      import Chat.Router.Helpers
+      import Api.Router.Helpers
 
       # Import all HTML functions (forms, tags, etc)
       use Phoenix.HTML
@@ -29,10 +17,10 @@ defmodule Chat.Web do
       use Phoenix.Controller
 
       # Alias the data repository as a convenience
-      alias Chat.Repo
+      alias Api.Repo
 
       # Import URL helpers from the router
-      import Chat.Router.Helpers
+      import Api.Router.Helpers
     end
   end
 
@@ -42,10 +30,8 @@ defmodule Chat.Web do
     end
   end
 
-  @doc """
-  When used, dispatch to the appropriate controller/view/etc.
-  """
   defmacro __using__(which) when is_atom(which) do
     apply(__MODULE__, which, [])
   end
+
 end

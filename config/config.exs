@@ -4,14 +4,13 @@ config :kafka_ex,
   brokers: [{"localhost", 9092}],
   consumer_group: "kafka_ex"
 
-
 # Configures the endpoint
-config :chat, Chat.Endpoint,
-  url: [host: "localhost"],
+config :api, Api.Endpoint,
+  url: [host: "127.0.0.1"],
   root: Path.expand("..", __DIR__),
   secret_key_base: "/RjKJmMO6raXPRTq63qTqid1x6lVKTOP+FTxZHfX6Ogd+1xYmH6eZZFhBu1CIwtg",
   debug_errors: false,
-  pubsub: [name: Chat.PubSub,
+  pubsub: [name: Api.PubSub,
            adapter: Phoenix.PubSub.PG2]
 
 # Configures Elixir's Logger

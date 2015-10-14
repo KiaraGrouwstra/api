@@ -1,13 +1,11 @@
-defmodule Chat.AmqpBiz do
+defmodule Api.AmqpBiz do
   require Logger
 
   # pub
 
   def post_urls(msg, options \\ []) do
     Logger.debug "post_urls"
-    chan = Chat.AmqpPub.get_chan()
-    # chan = Chat.AmqpSub.get_chan()
-    # splits on and trims whitespace
+    chan = Api.AmqpPub.get_chan()
     urls = String.split(msg)
     Enum.each urls, fn(url) ->
       uri = URI.parse(url)
@@ -20,10 +18,8 @@ defmodule Chat.AmqpBiz do
       # on that topic I'll wanna block having people use my scraper on its own localhost, 127.0.0.1, 192.168.*.*...
       domain = host
       exchange = "urls"
-      # Chat.AmqpPub.make_queue(chan, domain)
       AMQP.Queue.declare chan, domain
       AMQP.Queue.bind chan, domain, exchange, [routing_key: domain]
-      # Chat.AmqpPub.publish(chan, url, domain, options)
       AMQP.Basic.publish chan, exchange, domain, url, options
     end
     # return the size for the notification message
@@ -37,13 +33,12 @@ defmodule Chat.AmqpBiz do
     Enum.find(lst, nil, fn(x) -> elem(x, 0) == k end) |> elem(2)
   end
 
+  # create queue monitor with this name plus a given throttling rate
   def make_fetcher(chan, queue) do
-    # create queue monitor with this name plus a given throttling rate
-    {:ok, _pid} = Chat.AmqpSub.start_link(&(&1), [queue: {:join, queue}, lambda: &Chat.AmqpBiz.fetcher/3, chan: chan]) # , name: queue
+    {:ok, _pid} = Api.AmqpSub.start_link(&(&1), [queue: {:join, queue}, lambda: &Api.AmqpBiz.fetcher/3, chan: chan]) # , name: queue
   end
 
   def sub_existing(chan) do
-    # poll http://localhost:15672/api/bindings with auth test:test; filter results by "source":"urls"; grab resulting `destination` or `routing_key`
     resp = HTTPotion.get "http://localhost:15672/api/bindings", [basic_auth: {"test", "test"}]
     %HTTPotion.Response{body: body, status_code: 200} = resp
     Poison.decode!(body)
@@ -54,62 +49,57 @@ defmodule Chat.AmqpBiz do
     |> Enum.each fn(queue) -> make_fetcher(chan, queue) end
   end
 
-  # tag: %{consumer_tag: consumer_tag, delivery_tag: delivery_tag, redelivered: redelivered, exchange_name: exchange, shortstr: routing_key} = tag
-  # relevant: %{routing_key: route, reply_to: reply_to, headers: headers}
+  # converts headers back from their AMQP format (tuples of name/type/value) to keyword lists.
+  def headers_to_keywords(list) do
+    Enum.map(list, fn(
+      {name, type, value}) -> {String.to_atom(name), value}
+    end )
+  end
 
   # sub
 
-  # direct; from the start? or assume we can ignore since old connections are probably timed out already and continue instead from now?
-  def responder(chan, msg, tag) do
-    Logger.debug "responder"
-    name = String.to_atom(tag.reply_to)  # alt: routing_key
-    ws_chan = Chat.Socket.get(name)
-    # Phoenix.Channel.push(socket, "resp", %{data: msg})
-    send(ws_chan, {:resp, msg})
-    AMQP.Basic.ack chan, tag
+  # direct exchange, process where we left off; or assume time-out and make new queue?
+  def responder(chan, msg, %{routing_key: route, reply_to: addr, headers: headers}) do
+    Logger.debug "responder: msg: #{String.valid?(msg)}}"
+    name = String.to_atom(addr)  # alt: route
+    ws_chan = Api.Socket.get(name)
+    send(ws_chan, {:resp, msg, headers_to_keywords(headers)})
+    # AMQP.Basic.ack chan, tag
     # Basic.reject chan, tag, requeue: not redelivered
-    Logger.debug "tried sending response #{msg} to user #{tag.reply_to}!"
   end
 
-  # from now (new queue); topic; make new private queue attached to `amq.rabbitmq.event` by routing key `queue.created`?
   def creator(chan, _msg, tag) do
     Logger.debug "creator"
     queue = get_header(tag.headers, "name")
     make_fetcher(chan, queue)
   end
 
-  # from now (new queue); topic
   # def deleter(_chan, _msg, tag) do
   #   _queue = get_header(tag.headers, "name")
   #   # TODO: kill queue fetcher with this name
   # end
 
-  # ^ are all those exchanges fanout? How to deal with shared distributed queues if I'm gonna be making new private queues?
+  # ^ How to deal with shared distributed queues if I'm gonna be making new private queues?
 
   # from the start; topic; many different queues
-  def fetcher(chan, msg, %{routing_key: route, reply_to: addr, headers: _headers}) do
+  def fetcher(chan, msg, %{routing_key: route, reply_to: addr, headers: headers}) do
     Logger.debug "fetcher"
     domain = route
-    # Logger.debug "testing..."
-    # :ok = Chat.Throttler.test()
-    # Logger.debug "test ok!"
-    # Logger.debug "gonna ask permission"
-    pid = :erlang.whereis(Chat.Throttler)
-    :ok = Chat.Throttler.get(pid, domain)
-    Logger.debug "got permission!"
+    pid = :erlang.whereis(Api.Throttler)
+    :ok = Api.Throttler.get(pid, domain)
     url = msg
     head = [] # str |> Poison.decode! |> Enum.map(fn({k, v}) -> {String.to_atom(k), v} end)
     resp = HTTPotion.get url, [headers: head]
-    %HTTPotion.Response{body: body, headers: _headers, status_code: status} = resp
-    Logger.debug "status: #{status}"
+    %HTTPotion.Response{body: body, headers: headers, status_code: status} = resp
+    Logger.debug "fetcher: status: #{status}; headers: #{inspect(headers)}; body: #{String.valid?(body)};}"
     case status do
       x when x in 200..299 -> # OK
       # x when x in 300..399 -> # redirect
       # x when x >= 400      -> # error
     end
     # TODO: can I do manual acking here to ensure unhandled messages will return to the todo queue?
-    Logger.debug "fetched page #{url} for #{addr}, posting to responses!"
-    AMQP.Basic.publish chan, "responses", addr, body, [reply_to: addr]
+    # Logger.debug "fetched page #{url} for #{addr}, posting to responses!"
+    AMQP.Basic.publish chan, "responses", addr, body, [reply_to: addr, headers: headers]
     # part = 0
     # KafkaEx.produce("dumps", part, body)
   end

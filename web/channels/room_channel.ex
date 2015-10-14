@@ -1,31 +1,19 @@
-defmodule Chat.RoomChannel do
+defmodule Api.RoomChannel do
   use Phoenix.Channel
   require Logger
 
-  @doc """
-  Authorize socket to subscribe and broadcast events on this channel & topic
-
-  Possible Return Values
-
-  `{:ok, socket}` to authorize subscription for channel for requested topic
-
-  `:ignore` to deny subscription/broadcast on this channel
-  for the requested topic
-  """
   def join("rooms:lobby", msg, socket) do
-    Logger.debug "> joined: #{inspect msg}"
+    Logger.debug "join: msg: #{inspect(msg)}; socket: #{inspect(socket)};"
     Process.flag(:trap_exit, true)
-    :timer.send_interval(5000, :ping)
+    :timer.send_interval(60 * 000, :ping) # 5
     send(self, {:after_join, msg})
-
-    # Chat.Socket.start_link(socket, "tycho")
-    Chat.Socket.start_link(self, "tycho")
-
+    user = msg["user"]
+    socket = assign(socket, :user, user)
+    Api.Socket.start_link(self, user)
     {:ok, socket}
   end
 
   def join("rooms:" <> topic, _msg, _socket) do
-    Logger.debug "> unauthorized: #{inspect topic}"
     {:error, %{reason: "unauthorized"}}
   end
 
@@ -37,20 +25,19 @@ defmodule Chat.RoomChannel do
   # internal events to trigger sending
 
   def handle_info({:after_join, msg}, socket) do
-    Logger.debug "> handling after_join"
+    Logger.debug "after_join"
     broadcast! socket, "user:entered", %{user: msg["user"]}
     push socket, "join", %{status: "connected"}
     {:noreply, socket}
   end
 
-  def handle_info({:resp, msg}, socket) do
-    Logger.debug "> replying"
-    push socket, "resp", %{data: msg}
+  def handle_info({:resp, msg, req}, socket) do
+    Logger.debug "handle_info resp: msg: #{String.valid?(msg)}; req: #{inspect(req)}"
+    push socket, "RESP", %{body: msg, cb_id: req[:cb_id]}
     {:noreply, socket}
   end
 
   def handle_info(:ping, socket) do
-    # Logger.debug "> handling ping"
     push socket, "new:msg", %{user: "SYSTEM", body: "ping"}
     {:noreply, socket}
   end
@@ -58,24 +45,28 @@ defmodule Chat.RoomChannel do
   # handle client messages
 
   def handle_in("new:msg", msg, socket) do
-    Logger.debug "> handling new:msg"
+    Logger.debug "new:msg"
     broadcast! socket, "new:msg", %{user: msg["user"], body: msg["body"]}
     {:reply, {:ok, %{msg: msg["body"]}}, assign(socket, :user, msg["user"])}
   end
 
-  def handle_in("post:/urls", msg, socket) do
-    %{"data" => urls} = msg
-    Logger.debug "> handling post:/urls: #{inspect urls}"
-    socket = assign(socket, :user, msg["user"])
-    {:ok, num} = Chat.AmqpBiz.post_urls(urls, reply_to: socket.assigns[:user])
-    # so now I'd like to store the socket by this key?
+  def handle_in("POST:/urls", msg, socket) do
+    Logger.debug "POST:/urls"
+    %{"body" => body, "cb_id" => cb_id } = msg
+    urls = body
+    from = socket.assigns[:user]
+    headers = Enum.into(msg, [])
+    opts = [reply_to: from, headers: headers]
+    {:ok, num} = Api.AmqpBiz.post_urls(urls, opts)
     {:reply, {:ok, %{num: num}}, socket}
   end
 
   def handle_in(route, msg, socket) do
-    Logger.debug "> handling another: [#{route}]: #{inspect msg}"
-    broadcast! socket, route, msg
-    {:reply, {:ok, msg}, socket}
+    Logger.debug "fallback handle_in"
+    # broadcast! socket, route, msg
+    # {:reply, {:ok, msg}, socket}
+    push socket, route, msg
+    {:noreply, socket}
   end
 
   # customize/filter broadcasts
