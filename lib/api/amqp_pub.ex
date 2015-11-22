@@ -1,7 +1,7 @@
 defmodule Api.AmqpPub do
 
-  def start_link(_fun \\ &(&1), _opts \\ []) do
-    Agent.start_link(&connect/0, name: __MODULE__)
+  def start_link(_fun \\ &(&1), opts \\ [name: __MODULE__]) do
+    Agent.start_link(&connect/0, opts)
   end
 
   def get_chan() do
@@ -11,7 +11,7 @@ defmodule Api.AmqpPub do
   def connect() do
     {:ok, conn} = AMQP.Connection.open("amqp://test:test@127.0.0.1:5672")
     {:ok, chan} = AMQP.Channel.open(conn)
-    Api.AmqpBiz.sub_existing(chan)   # move...
+    Api.Utils.sub_existing(chan)   # move...
     chan
   end
 

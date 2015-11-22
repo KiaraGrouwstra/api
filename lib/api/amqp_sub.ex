@@ -4,7 +4,7 @@ defmodule Api.AmqpSub do
   require Logger
   use ExActor.GenServer
 
-  defstart start_link(fun, opts), do: init_subscribe(opts)
+  defstart start_link(fun, opts), do: init(opts)
 
   def connect() do
     # {:ok, _pid} = KafkaEx.create_worker(:my_kafka)  # doesn't belong here, esp. if one per instance...
@@ -13,10 +13,10 @@ defmodule Api.AmqpSub do
     chan
   end
 
-  def init_subscribe([queue: q, lambda: l]) do
-    init_subscribe([queue: q, lambda: l, chan: connect()])
+  def init([queue: q, lambda: l]) do
+    init([queue: q, lambda: l, chan: connect()])
   end
-  def init_subscribe([queue: queue_settings, lambda: l, chan: chan]) do
+  def init([queue: queue_settings, lambda: l, chan: chan]) do
     queue = case queue_settings do
       {:join, queue} -> queue
       {:make, exchange, route} ->
@@ -28,11 +28,11 @@ defmodule Api.AmqpSub do
     {:ok, %{chan: chan, lambda: l, queue: queue_settings}} # keep queue to reconnect?
   end
 
-  # defhandleinfo {:basic_cancel,     _tag}, do: stop(:normal) # new_state(connect())
-  defhandleinfo {:basic_consume_ok, _tag}, do: noreply
-  defhandleinfo {:basic_cancel_ok,  _tag}, do: noreply
-  defhandleinfo {:basic_deliver, payload, tag}, state: %{chan: chan, lambda: lambda} do
-    spawn fn -> lambda.(chan, payload, tag) end
+  # defhandleinfo {:basic_cancel,     _meta}, do: stop(:normal) # new_state(connect())
+  defhandleinfo {:basic_consume_ok, _meta}, do: noreply
+  defhandleinfo {:basic_cancel_ok,  _meta}, do: noreply
+  defhandleinfo {:basic_deliver, payload, meta}, state: %{chan: chan, lambda: lambda} do
+    spawn fn -> lambda.(chan, payload, meta) end
     noreply
   end
 

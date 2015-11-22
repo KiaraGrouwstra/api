@@ -1,3 +1,5 @@
+# should I like use that (D)ETS for storing stuff?
+
 defmodule Api.Socket do
 
   def start_link(ws, name) do
