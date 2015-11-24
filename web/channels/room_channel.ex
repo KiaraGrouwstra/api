@@ -7,12 +7,12 @@ defmodule Api.RoomChannel do
   def join("rooms:lobby", msg, socket) do
     Logger.debug "join: msg: #{inspect(msg)}; socket: #{inspect(socket)};"
     Process.flag(:trap_exit, true)
-    :timer.send_interval(60 * 1000, :ping) # 5
+    :timer.send_interval(60_000, :ping) # 5
     send(self, {:after_join, msg})
     user = msg["user"]
-    socket = assign(socket, :user, user)
+    socket2 = assign(socket, :user, user)
     Api.Socket.start_link(self, user)
-    {:ok, socket}
+    {:ok, socket2}
   end
 
   def join("rooms:" <> _topic, _msg, _socket) do
@@ -36,7 +36,7 @@ defmodule Api.RoomChannel do
 
   def handle_info({:resp, msg, meta}, socket) do
     Logger.debug "handle_info resp: msg: #{String.valid?(msg)}; meta: #{inspect(meta)}"
-    push socket, meta[:handler], msg
+    push socket, meta.handler, msg
     {:noreply, socket}
   end
 
@@ -57,11 +57,11 @@ defmodule Api.RoomChannel do
   # this function handles multiple URLs, yet it's responding like to a single request (RESP)... too bad I can't complete array requests.
   def handle_in(r, msg, socket) when r == "POST:/urls" do
     Logger.debug r
-    Logger.debug "msg: #{inspect(msg)}"
+    # Logger.debug "msg: #{inspect(msg)}"
     info = %Info{meta: %Meta{user: socket.assigns[:user], req: msg |> to_atoms() |> as(MsgIn), handler: "RESP", route: r}}
-    Logger.debug "info: #{inspect(info)}"
+    # Logger.debug "info: #{inspect(info)}"
     urls = msg["body"] |> String.split()
-    Api.AmqpBiz.post_urls(urls, info) # {:ok, num} =
+    Api.Utils.post_urls(urls, info) # {:ok, num} =
     # {:reply, {:ok, %{num: num}}, socket}
     {:noreply, socket}
   end
@@ -76,7 +76,7 @@ defmodule Api.RoomChannel do
       info |> set([:msg, :body], %{name: name}) |> set([:meta, :req, :headers], req_headers)
     end)
     urls = msg["body"] # |> String.split()    # wait, I don't think zip_duplicate handles combining with 1-element arrays yet atm.
-    Api.AmqpBiz.post_urls(urls, opts) # {:ok, num} =
+    Api.Utils.post_urls(urls, opts) # {:ok, num} =
     # push socket, "DONE", %{cb_id: id}
     # ^ I'll have to make things synchronous to know when it's done...
     # unless I tally expected responses left for this cb_id, then on each partial response check if all's done.

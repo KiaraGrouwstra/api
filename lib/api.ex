@@ -7,17 +7,21 @@ defmodule Api do
   def start(_type, _args) do
     children = [
       supervisor(@manager, []),
-      worker(Api.AmqpPub, [@manager, []]),
-      worker(Api.AmqpSub, [@manager, [queue: {:join, "responses"}, lambda: &Api.AmqpBiz.responder/3]], id: :responder),
-      worker(Api.AmqpSub, [@manager, [queue: {:make, "amq.rabbitmq.event", "queue.created"}, lambda: &Api.AmqpBiz.creator/3]], id: :creator),
-      # worker(Api.AmqpSub, [@manager, [queue: {:make, "amq.rabbitmq.event", "queue.deleted"}, lambda: &Api.AmqpBiz.deleter/3]], id: :deleter),
       worker(Api.ThrottlerPool, [@manager, [name: :throttlers]]),
-      # worker(Api.QueueStore, [@manager, [name: :queues]]),
       worker(Api.Repo, [])
     ]
     # strategies: http://elixir-lang.org/docs/stable/elixir/Supervisor.html
     opts = [strategy: :one_for_one, name: Api.Supervisor]
-    Supervisor.start_link(children, opts)
+    sup = Supervisor.start_link(children, opts)
+    init()  # is this the right place?
+    sup
+  end
+
+  def init() do
+    # Mix.Task.run "amnesia.drop", ["-db QueueDB"]
+    # Mix.Task.run "amnesia.create", ["-db QueueDB", "--disk"]
+    Api.QueueStore.iterate &Api.Utils.handle_domain/1
+    Api.QueueStore.iterate &IO.puts(&1)
   end
 
   # Tell Phoenix to update the endpoint configuration whenever the application is updated.

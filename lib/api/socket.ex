@@ -2,12 +2,15 @@
 
 defmodule Api.Socket do
 
-  def start_link(ws, name) do
-    Agent.start_link(fn -> ws end, name: String.to_atom(name))
+  @doc "store the socket of a user"
+  def start_link(ws, user) do
+    name = String.to_atom(user)
+    Agent.start_link(fn -> ws end, name: name)
   end
 
+  @doc "get the socket for this user"
   def get(name) do
-    Agent.get(name, &(&1))
+    name |> String.to_atom() |> Agent.get(&(&1))
   end
 
 end
