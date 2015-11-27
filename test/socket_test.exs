@@ -5,7 +5,7 @@ defmodule SocketTest do
   @user "dummy_user"
 
   setup do
-    # pid = 
+    # pid =
     start_link(self(), @user)
     # on_exit fn ->
     #   Supervisor.terminate_child(self(), pid)
@@ -14,7 +14,7 @@ defmodule SocketTest do
   end
 
   test "get" do
-    assert get(@user) |> is_pid()
+    assert get(@user |> String.to_atom()) |> is_pid()
   end
 
 end

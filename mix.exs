@@ -45,7 +45,8 @@ defmodule Api.Mixfile do
      {:porcelain, ">= 2.0.0"},
      {:kafka_ex, ">= 0.2.0"},
      {:amnesia, github: "meh/amnesia", tag: "master"},
-     {:snappy, git: "https://github.com/ricecake/snappy-erlang-nif", tag: "270fa36bee692c97f00c3f18a5fb81c5275b83a3"}
+     {:snappy, git: "https://github.com/ricecake/snappy-erlang-nif", tag: "270fa36bee692c97f00c3f18a5fb81c5275b83a3"},
+     {:websocket_client, git: "https://github.com/jeremyong/websocket_client.git", only: :test}
     ]
   end
 end

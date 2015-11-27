@@ -10,7 +10,7 @@ defmodule Api.Socket do
 
   @doc "get the socket for this user"
   def get(name) do
-    name |> String.to_atom() |> Agent.get(&(&1))
+    Agent.get(name, &(&1))
   end
 
 end

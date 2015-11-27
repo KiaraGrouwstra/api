@@ -1,5 +1,5 @@
 # mix amnesia.drop -db QueueDB
-# mix amnesia.create -db QueueDB --disk
+# mix amnesia.create -db QueueDB # --disk
 use Amnesia
 defdatabase QueueDB do
 

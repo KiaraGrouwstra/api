@@ -33,4 +33,5 @@
   "ranch": {:hex, :ranch, "1.1.0"},
   "redo": {:hex, :redo, "2.0.1"},
   "snappy": {:git, "https://github.com/ricecake/snappy-erlang-nif", "270fa36bee692c97f00c3f18a5fb81c5275b83a3", [tag: "270fa36bee692c97f00c3f18a5fb81c5275b83a3"]},
-  "ssl_verify_hostname": {:hex, :ssl_verify_hostname, "1.0.5"}}
+  "ssl_verify_hostname": {:hex, :ssl_verify_hostname, "1.0.5"},
+  "websocket_client": {:git, "https://github.com/jeremyong/websocket_client.git", "f6892c8b55004008ce2d52be7d98b156f3e34569", []}}

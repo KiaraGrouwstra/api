@@ -5,7 +5,7 @@ defmodule Api.RoomChannel do
   import Elins
 
   def join("rooms:lobby", msg, socket) do
-    Logger.debug "join: msg: #{inspect(msg)}; socket: #{inspect(socket)};"
+    # Logger.debug "join: msg: #{inspect(msg)}; socket: #{inspect(socket)};"
     Process.flag(:trap_exit, true)
     :timer.send_interval(60_000, :ping) # 5
     send(self, {:after_join, msg})
@@ -34,9 +34,9 @@ defmodule Api.RoomChannel do
     {:noreply, socket}
   end
 
-  def handle_info({:resp, msg, meta}, socket) do
-    Logger.debug "handle_info resp: msg: #{String.valid?(msg)}; meta: #{inspect(meta)}"
-    push socket, meta.handler, msg
+  def handle_info({:resp, msg}, socket) do
+    # Logger.debug "handle_info resp: msg: #{String.valid?(msg)}"
+    push socket, "msg", msg
     {:noreply, socket}
   end
 
@@ -54,45 +54,53 @@ defmodule Api.RoomChannel do
     {:reply, {:ok, %{msg: msg["body"]}}, assign(socket, :user, msg["user"])}
   end
 
+
+  #######################################################
+
+  def handle_in(r, msg, socket) do
+    Logger.debug r
+    req = to_atoms(msg)
+    body = Map.merge %{headers: %{}}, req.body  # default param val
+    info = %Info{user: socket.assigns[:user], req: body, route: r, msg: %{cb_id: req.cb_id} }
+    handle r, info, body
+    # {:noreply, socket}
+    {:reply, :ok, socket}
+  end
+
   # this function handles multiple URLs, yet it's responding like to a single request (RESP)... too bad I can't complete array requests.
-  def handle_in(r, msg, socket) when r == "POST:/urls" do
-    Logger.debug r
-    # Logger.debug "msg: #{inspect(msg)}"
-    info = %Info{meta: %Meta{user: socket.assigns[:user], req: msg |> to_atoms() |> as(MsgIn), handler: "RESP", route: r}}
-    # Logger.debug "info: #{inspect(info)}"
-    urls = msg["body"] |> String.split()
-    Api.Utils.post_urls(urls, info) # {:ok, num} =
-    # {:reply, {:ok, %{num: num}}, socket}
-    {:noreply, socket}
+  @doc "fetch a URL and return its body"
+  def handle("/urls", info, body) do
+    Api.Utils.post_urls(body.urls, info)
+  end
+  def respond("/urls", info, res) do
+    info.msg |> set [:body], res.body
   end
 
-  def handle_in(r, msg, socket) when r == "POST:/check" do
-    Logger.debug r
-    info = %Info{meta: %Meta{user: socket.assigns[:user], req: msg |> to_atoms() |> as(MsgIn), handler: "PART", route: r}}  # different handler
-    headers = msg["headers"]
-    headers_without = Enum.map(headers, fn {k, _v} -> {"without #{k}", Map.delete(headers, k) } end)
-    header_combs = [{"all", headers}, {"none", []}] ++ headers_without
-    opts = Enum.map(header_combs, fn({name, req_headers}) ->
-      info |> set([:msg, :body], %{name: name}) |> set([:meta, :req, :headers], req_headers)
+  @doc "return info extracted from a given url based on a Parsley parselet"
+  def handle("/parse", info, %{url: url, parselet: parselet}) do
+    info_ = info |> set [:misc, :parselet], parselet
+    Api.Utils.post_urls url, info_
+  end
+  def respond("/parse", info, res) do
+    json = Api.Parsing.parse(res.body, info.misc.parselet)
+    info.msg |> set [:body], json
+  end
+
+  @doc "fetch a URL using different combinations of the given request headers to analyze which affect results"
+  def handle("/check", info, body) do
+    hdrs = body.headers
+    headers_without = Enum.map(hdrs, fn {k, _v} -> {"without #{k}", Map.delete(hdrs, k) } end)
+    header_combs = [{"all", hdrs}, {"none", []}] ++ headers_without
+    info = Enum.map(header_combs, fn({name, req_hdrs}) ->
+      info |> set([:msg, :body], %{name: name}) |> set([:req, :headers], req_hdrs)
     end)
-    urls = msg["body"] # |> String.split()    # wait, I don't think zip_duplicate handles combining with 1-element arrays yet atm.
-    Api.Utils.post_urls(urls, opts) # {:ok, num} =
-    # push socket, "DONE", %{cb_id: id}
-    # ^ I'll have to make things synchronous to know when it's done...
-    # unless I tally expected responses left for this cb_id, then on each partial response check if all's done.
-    # even then, I'd need guarantees on the done getting received only after the last messages though...
-    # while I don't have any delivery guarantees in the first place.
-    # temp workaround: do a sync_confirm on the last expected item before sending an onComplete
-    # (this assumes all previous messages have been received by then)
-    # {:reply, {:ok, %{num: num}}, socket}
-    {:noreply, socket}
+    Api.Utils.post_urls body.urls, info
+    # track what's left on client?
   end
-
-  def handle_in(_r, msg, socket) do
-    Logger.debug "fallback handle_in"
-    # broadcast! socket, route, msg
-    push socket, "FALLBACK", msg
-    {:noreply, socket}
+  def respond("/check", info, res) do
+    info.msg
+      |> set([:body, :status], res.status_code)
+      |> set([:body, :length], byte_size(res.body))
   end
 
   # customize/filter broadcasts

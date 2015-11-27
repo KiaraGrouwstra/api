@@ -18,6 +18,7 @@ defmodule Api do
   end
 
   def init() do
+    # delete folder Mnesia.nonode@nohost? wait, no longer disk, so all good.
     # Mix.Task.run "amnesia.drop", ["-db QueueDB"]
     # Mix.Task.run "amnesia.create", ["-db QueueDB", "--disk"]
     Api.QueueStore.iterate &Api.Utils.handle_domain/1

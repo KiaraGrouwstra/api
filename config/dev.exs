@@ -26,8 +26,8 @@ config :api, Api.Endpoint,
 # Do not include metadata nor timestamps in development logs
 config :logger, :console,
   format: "[$level] $message\n",
-  level: :debug
-  # level: :info
+  # level: :debug
+  level: :info
 
 # Configure your database
 config :api, Api.Repo,

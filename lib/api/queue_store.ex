@@ -10,7 +10,7 @@ defmodule Api.QueueStore do
   # Api.QueueStore.push(domain, item)
   @doc "push an item to the stack"
   def push(item, domain) do
-    Logger.debug "push(#{inspect({item, domain})})"
+    Logger.debug "push(#{inspect({domain})})" # item,
     {status, queue} = get_queue(domain)
     q2 = :queue.in(item, queue)
     set_queue(domain, q2)
@@ -81,7 +81,7 @@ defmodule Api.QueueStore do
         :timer.sleep(1_000)
         # arbitrary; alternative: ditch domain at say x credits
       {:value, item} ->
-        Logger.debug "consuming: #{inspect(item)}"
+        # Logger.debug "consuming: #{inspect(item)}"
         fun.(item)
     end
     consume_queue(domain, fun)

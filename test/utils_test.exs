@@ -1,14 +1,14 @@
+# mix test --include traffic:true
 defmodule UtilsTest do
+  ExUnit.configure(exclude: [traffic: true])
   use ExUnit.Case, async: false
   import Api.Utils
-  ExUnit.configure(exclude: [traffic: true])
   import Elins
 
-  @url "http://www.baidu.com/"
+  @url "https://www.baidu.com/"
   @domain "baidu.com"
-  @fake_domain "example.org"
   @body "{body:123}"
-  @info %Info{msg: %MsgOut{body: %{status: 200}}}
+  # @resp %HTTPotion.Response{body: @body, headers: %{}, status_code: 200}
 
   setup do
     ThrottlerTest.kill_throttlers()
@@ -20,14 +20,15 @@ defmodule UtilsTest do
 
   #######################################################
 
-  @tag :traffic
-  test "post_urls" do
-    post_urls(@url)
-    # assert Api.QueueStore.pop(@domain) == {:value, {@url, []}}
-    # can't really test it, as it's do more than ask -- it now already creates a queue handler that pops the URL off already.
-    # assert num_throttlers() > 0
-    assert url_domain(@url) |> Throttler.get() == :ok
-  end
+  # @tag :traffic
+  # test "post_urls" do
+  #   post_urls(@url, [])
+  #   assert Api.QueueStore.pop(@domain) == {:value, {@url, []}}
+  #   # can't really test it, as it's do more than ask -- it now already creates a queue handler that pops the URL off already.
+  #   # uh, if the queues already existed it gets an :ok and doesn't create them. in this case test by popping back off instead?
+  #   # assert num_throttlers() > 0
+  #   # assert url_domain(@url) |> String.to_atom() |> Api.Throttler.get() == :ok
+  # end
 
   test "handle_domain" do
     handle_domain(@domain)
@@ -56,29 +57,18 @@ defmodule UtilsTest do
   #   # catch in websocket?
   # end
 
-  @tag :traffic
-  test "fetch_check" do
-    assert {:result, _} = fetch_check({@url, %Info{}})
-    assert {:redirect, _} = fetch_check({"http://baidu.com/", %Info{}})
-  end
-
-  test "prepare_response - urls" do
-    info = set(@info, [:meta, :route], "POST:/urls")
-    assert prepare_response(@body, info).body == @body
-  end
-  test "prepare_response - check" do
-    info = set(@info, [:meta, :route], "POST:/check")
-    assert prepare_response(@body, info).body.length == 10
-  end
-
   # fails, still leaves on the www.
   # test "url_domain" do
   #   assert url_domain(@url) == @domain
   # end
 
+  # test "decode" do
+  #   assert decode() == :foo
+  # end
+
   @tag :traffic
-  test "fetch_decode" do
-    assert fetch_decode(@url, []).status == 200
+  test "fetch" do
+    assert %HTTPotion.Response{} = fetch(@url, [])
   end
 
   test "zip_duplicate" do
