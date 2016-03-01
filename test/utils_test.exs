@@ -81,8 +81,21 @@ defmodule UtilsTest do
     assert %{"a" => 1} |> to_atoms() == %{a: 1}
   end
 
+  test "to_atoms - recursive" do
+    assert %{"a" => %{ "b" => "c" }} |> to_atoms() == %{a: %{ b: "c" }}
+  end
+
+  test "to_atoms - recursive through lists" do
+    assert %{"a" => [ %{ "b" => "c" } ] } |> to_atoms() == %{a: [ %{ b: "c" } ] }
+  end
+
   test "as" do
     assert as(%{}, Info).__struct__ == Info
+  end
+
+  test "de_jsonp" do
+    html = "<p src=\\\"lol\\\" />"
+    assert de_jsonp(html) == "<p src=\"lol\" />"
   end
 
 end

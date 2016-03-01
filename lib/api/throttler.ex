@@ -16,7 +16,7 @@ defmodule Api.Throttler do
   end
 
   @doc "decrement the value for a key by 1"
-  defhandleinfo :dec, state: state, do: new_state(state |> edit([:val], fn v -> v - 1 end))
+  defhandleinfo :dec, state: state, do: new_state(state |> edit([:val], fn v -> v - 1 end).())
 
   @doc "ask permission given a key, adding it if it wasn't in yet"
   def get(pid), do: GenServer.call(pid, :get)

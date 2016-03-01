@@ -1,3 +1,6 @@
+# `lib` is the perfect place to put anything that needs to manage state outside of
+# the lifecycle of a request. For instance other Supervisors, Agents, or GenServers.
+
 defmodule Api do
   use Application
   # OTP: http://elixir-lang.org/docs/stable/elixir/Application.html

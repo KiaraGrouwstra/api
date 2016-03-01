@@ -8,16 +8,16 @@ defmodule Api.Utils do
   @doc "for arrays of URLs and options, posts each pair to the fetching queue."
   def post_urls(urls, opts \\ []) do
     Logger.debug "post_urls"
-    Api.Utils.zip_duplicate(urls, opts) |> Enum.each fn({url, opt}) ->
+    Api.Utils.zip_duplicate(urls, opts) |> Enum.each(fn({url, opt}) ->
     # for url <- urls, opt <- opts do  # does a cartesian, ok for 1:n/n:1 but for n:n I need zip instead...
       domain = url_domain(url)
-      opt_ = opt |> set [:misc, :domain], domain
+      opt_ = opt |> set([:misc, :domain], domain).()
       status = Api.QueueStore.push({url, opt_}, domain)
       case status do
         :created -> handle_domain(domain)
         :ok -> :noop
       end
-    end
+    end)
   end
 
   @doc "create fetcher/throttler for this domain"
@@ -85,7 +85,7 @@ defmodule Api.Utils do
   end
 
   @utf8 "utf-8"
-  @doc "fetch a URL and normalize its encoding to UTF-8"
+  @doc "decode a response to UTF-8"
   def decode(%HTTPotion.Response{body: enc_body, headers: resp_headers} = resp) do
     # Logger.debug "fetcher: url: #{url}; req_headers: #{inspect(req_headers)}; status: #{status}; resp_headers: #{inspect(resp_headers)}; body: #{byte_size(enc_body)} (#{String.valid?(enc_body)});}"
     body = try do
@@ -110,15 +110,16 @@ defmodule Api.Utils do
     end
     Logger.debug "decoded: #{byte_size(body)} (#{String.valid?(body)})"
     # %HTTPotion.Response{body: body, headers: resp_headers, status_code: status}
-    resp |> Elins.set [:body], body
+    resp |> Elins.set([:body], body).()
   end
 
   @doc "fetch a page, retrying on failure..."
-  def fetch(url, req_headers) do
+  def fetch(url, req_headers, opts \\ []) do
     try do
-      HTTPotion.get url, [headers: req_headers]
+      HTTPotion.get url, Keyword.merge([headers: req_headers, timeout: 5_000], opts)
     rescue
-      _e in HTTPotion.HTTPError ->
+      e in HTTPotion.HTTPError ->
+        Logger.info "httppotion error: #{e.message}"
         Logger.info "retrying fetch for #{url}..."
         :timer.sleep 1_000
         fetch(url, req_headers)
@@ -134,10 +135,22 @@ defmodule Api.Utils do
     # but assumes 1 TLD, failing for dual ones like .co.uk
     # and for none (IP-based, localhost), though those should lack subs too...
     # dual TLDs to pattern-match against: https://en.wikipedia.org/wiki/Second-level_domain
+    # https://github.com/publicsuffix/list/blob/master/public_suffix_list.dat
+    # ^ if I get the first match given current order it may just match just the final part instead of both; resort?
     # http://stackoverflow.com/a/14662475/1502035
     # on that topic I'll wanna block having people use my scraper on its own localhost, 127.0.0.1, 192.168.*.*...
     domain = host
     domain
+  end
+
+  def de_jsonp(str) do
+    # case Regex.run(~r/^\s*([\w_]*)\s*\("(.+)\s*"\)\;?\s*$/, str) do
+    case Regex.run(~r/^\s*([\w_]*)\s*\((.*)\)\;?\s*$/, str) do
+      [_snip, function, val] ->
+        # String.replace(html, "\\\"", "\"")
+        Poison.decode!(val)
+      _ -> throw "[#{str}] did not match JSONP pattern!"
+    end
   end
 
   @doc "duplicates non-lists then zips -- zip only does n:n; '<-' cartesians lists so n:1/1:n; this does both."
@@ -158,11 +171,19 @@ defmodule Api.Utils do
   end
 
   @doc "convert a map's string keys to atoms"
-  def to_atoms(map) do
+  # map
+  def to_atoms(map) when is_map(map) do
     map |> Enum.into(%{}, fn
-      {k,v} when is_map(v) -> {String.to_atom(k), to_atoms(v)}
-      {k,v}                -> {String.to_atom(k), v}
+      {k,v} -> {String.to_atom(k), to_atoms(v)}
     end)
+  end
+  # list
+  def to_atoms(list) when is_list(list) do
+    Enum.map(list, fn (x) -> to_atoms(x) end)
+  end
+  # scalar
+  def to_atoms(x) do
+    x
   end
 
   @doc "convert a map to a given struct"

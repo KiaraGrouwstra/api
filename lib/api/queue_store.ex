@@ -48,7 +48,7 @@ defmodule Api.QueueStore do
     Amnesia.transaction do
       Queue.where(true, select: domain)
       |> Amnesia.Selection.values
-      |> Enum.each fun
+      |> Enum.each(fun)
     end
   end
 

@@ -1,10 +1,14 @@
 defmodule Api.Parsing do
   require Logger
 
-  @doc "parse the DOM of a response body based on the given parselet, returning a JSON result of extracted content"
+  defmodule SelectorError do
+    defexception message: "Floki selector failed!"  # #{sel}
+  end
+
+  @doc "parse the DOM of a response body based on the given parselet (JSON string), returning a JSON result of extracted content"
   def parse(body, parselet) do
     # Logger.info "body: #{body}"
-    Logger.info "parselet: #{parselet}"
+    # Logger.info "parselet: #{parselet}"
     # IO.puts "body: #{body}"
     # IO.puts "parselet: #{parselet}"
     # Logger.debug
@@ -20,57 +24,83 @@ defmodule Api.Parsing do
     # out
   end
 
-  @doc "parse an HTML body/element based on a Parsley parslet using Floki"
-  def floki(body, map) when is_map(map) do  #, is_array \\ false
-    map |> Enum.into %{}, fn({k,v}) -> floki_element({k,v}, body) end
-    # for {k, v} <- map, into: %{}, do
-    #   {k, floki(body,v)}
-    # end
+  @doc "parse an HTML body/element based on a Parsley parselet value using Floki"
+  # map
+  def floki(body, map) when is_map(map) do
+    map
+    |> Enum.map(fn({k,v}) -> floki_element_prep({k,v}, body) end)
+    |> Enum.filter(fn(x) -> x end)
+    |> Enum.into(%{})
   end
-  def floki(body, str) do # when is_string(selector)
-    # Floki.find(body, selector) |> List.first() |> Floki.raw_html
-    # selector = str
-    el = case String.contains?(str, "@") do
-      false ->
-        # case Floki.find(body, str) do
-        #   [] -> nil
-        #   list -> List.first(list) |> Floki.text
-        # end
-        floki_first body, str, fn(el) -> Floki.text(el) end
-      true ->
-        case String.split(str, "@") do
-          [sel, attr] ->
-            Floki.attribute(body, sel, attr)
-          [sel] ->
-            # Floki.find(body, sel) |> List.first() |> Floki.raw_html
-            floki_first body, sel, fn(el) -> Floki.raw_html(el) end
-          # TODO: if I can implement inner_html on Floki, can I use a final @ for inner, @@ for outer html?
+  # string
+  def floki(body, str, is_arr \\ false) do # when is_string(selector)
+    if String.contains?(str, "@") do
+      case String.split(str, "@") do
+        # otherwise get the @attribute
+        [sel, attr] ->
+          [match] = Floki.attribute(body, sel, attr)
+          match
+        # for an empty attribute get the (outer) html
+        [sel] ->
+          floki_match body, sel, fn(el) -> Floki.raw_html(el) end, is_arr
+        # TODO: if I can implement inner_html on Floki, can I use a final @ for inner, @@ for outer html?
+      end
+    else
+      # by default just grab the element text
+      floki_match body, str, fn(el) -> Floki.text(el) end, is_arr
+    end
+  end
+
+  @doc "get/transform the match for a selector"
+  def floki_match(el, sel, fun \\ &(&1), is_arr \\ false) do
+    res = Floki.find(el, sel)
+    if is_arr do
+      res |> Enum.map(fun.())
+    else
+      case res do
+        # [] -> nil # if optional # nope, I'm handling this in floki_element_prep, since rescuing at an intermediate level allows bubbling it up
+        # [] -> throw "floki selector #{sel} failed!"
+        [] -> raise SelectorError, message: "floki selector #{sel} failed!\n\n#{el}\n\nfloki selector #{sel} failed!"
+        list -> List.first(list) |> fun.()
+      end
+    end
+  end
+
+  @doc "handles optionality for parselet keys ending in '?'."
+  def floki_element_prep({k, v}, body) do
+    case Regex.run(~r/^([\w_]+)\?$/, k) do
+      [_k, optional] ->
+        try do
+          floki_element({optional, v}, body)
+        rescue
+          e in SelectorError ->
+            nil
         end
-    end
-    el
-  end
-  def floki_first(body, sel, fun) do
-    case Floki.find(body, sel) do
-      # [] -> nil # only if optional
-      [] -> throw "floki selector #{sel} failed!"
-      list -> List.first(list) |> fun.()
+      _ ->
+        floki_element({k, v}, body)
     end
   end
-  def floki_element({ k, [map] }, body) when is_map(map) do  # when is_list(v)
-    # "#{arr_name}(#{selector})" = k
-    # arr_name <> "(" <> selector <> ")" = k
+
+  @doc "transform a key-value pair into its extracted result"
+  # map
+  def floki_element({k, [map]}, body) when is_map(map) do  # when is_list(v)
     {arr_name, selector} = case Regex.run(~r/([\w_]+)\((.+)\)/, k) do
       [_k, a, b] -> {a, b}
       _ -> throw "bad array key #{k}!"
     end
     arr = Floki.find(body, selector)
-      |> Enum.map fn(elem) ->
+      |> Enum.map(fn(elem) ->
         elem |> Floki.raw_html |> floki(map)
-      end
+      end)
     {arr_name, arr}
   end
+  # array
+  def floki_element({k,[v]}, body) do
+    {k, floki(body, v, true)}
+  end
+  # string
   def floki_element({k,v}, body) do # when is_string(v)
-    {k, floki(body,v)}
+    {k, floki(body, v, false)}
   end
 
 end

@@ -16,7 +16,7 @@ defmodule Api.Mixfile do
   def application do
     [
       mod: {Api, []},
-      applications: [:phoenix, :phoenix_html, :cowboy, :logger, :amqp, :httpotion, :iconverl, :elins, :floki, :porcelain, :amnesia] # , :lens, :kafka_ex, :snappy
+      applications: [:phoenix, :phoenix_html, :cowboy, :logger, :httpotion, :iconverl, :elins, :floki, :porcelain, :amnesia, :fun] # , :lens, :kafka_ex, :snappy, :amqp
    ]
   end
 
@@ -33,20 +33,22 @@ defmodule Api.Mixfile do
      {:cowboy, ">= 1.0.0"},
     #  https://github.com/pma/amqp
     #  {:amqp, ">= 0.1.3"},
-     {:amqp, git: "https://github.com/tycho01/amqp", tag: "patch-1"},
+    #  {:amqp, github: "tycho01/amqp", tag: "patch-1"},
      {:exactor, ">= 2.2.0"},
     #  {:httpoison, ">= 0.7.2"},
      {:ibrowse, github: "cmullaparthi/ibrowse", tag: "v4.1.2"},
      {:httpotion, ">= 2.1.0"},
-     {:iconverl, git: "https://github.com/edescourtis/iconverl", tag: "master"},
-    #  {:lens, git: "https://github.com/tycho01/erl-lenses", tag: "master"},   # shortening name, hax
-     {:elins, git: "https://github.com/tycho01/elins", tag: "master"},
-     {:floki, git: "https://github.com/philss/floki", tag: "master"}, # marianoguerra/qrly
+     {:iconverl, github: "edescourtis/iconverl", tag: "master"},
+    #  {:lens, github: "tycho01/erl-lenses", tag: "master"},   # shortening name, hax
+     {:elins, github: "tycho01/elins", tag: "master"},
+     {:fun, github: "tycho01/fun", tag: "master"},
+     {:floki, github: "philss/floki", tag: "master"}, # marianoguerra/qrly
      {:porcelain, ">= 2.0.0"},
      {:kafka_ex, ">= 0.2.0"},
      {:amnesia, github: "meh/amnesia", tag: "master"},
-     {:snappy, git: "https://github.com/ricecake/snappy-erlang-nif", tag: "270fa36bee692c97f00c3f18a5fb81c5275b83a3"},
-     {:websocket_client, git: "https://github.com/jeremyong/websocket_client.git", only: :test}
+     {:snappy, github: "ricecake/snappy-erlang-nif", tag: "270fa36bee692c97f00c3f18a5fb81c5275b83a3"},
+     {:websocket_client, github: "jeremyong/websocket_client", only: :test},
+     {:exrm, "~> 1.0.0-rc8"}
     ]
   end
 end

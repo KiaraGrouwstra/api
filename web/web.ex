@@ -1,3 +1,6 @@
+# Since everything in `web` is reloaded for each request the `web` directory is the perfect
+# place to put anything that needs to manage state only for the duration of that request.
+
 defmodule Api.Web do
 
   def view do

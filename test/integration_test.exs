@@ -9,7 +9,7 @@ defmodule IntegrationTest do
 
   @port 8080 #34055 #80 #8080 #5807
   @room "rooms:lobby"
-  @msg %{"body" => "", "cb_id" => 1, "headers" => %{}}
+  @msg %{"body" => "", "id" => 1, "headers" => %{}}
   @url "http://www.baidu.com/"
 
   setup_all do
@@ -30,7 +30,7 @@ defmodule IntegrationTest do
   end
 
   test "/urls" do
-    socket_send set(@msg, ["body"], @url), "/urls"
+    socket_send(@msg |> set(["body"], @url), "/urls").()
     assert_receive :foo # %Message{event: "phx_reply", payload: %{"response" => %{}, "status" => "ok"}, ref: "1", topic: "rooms:lobby1"}
   end
 

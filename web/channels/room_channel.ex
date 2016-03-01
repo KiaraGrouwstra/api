@@ -61,7 +61,7 @@ defmodule Api.RoomChannel do
     Logger.debug r
     req = to_atoms(msg)
     body = Map.merge %{headers: %{}}, req.body  # default param val
-    info = %Info{user: socket.assigns[:user], req: body, route: r, msg: %{cb_id: req.cb_id} }
+    info = %Info{user: socket.assigns[:user], req: body, route: r, msg: %{id: req.id} }
     handle r, info, body
     # {:noreply, socket}
     {:reply, :ok, socket}
@@ -73,17 +73,17 @@ defmodule Api.RoomChannel do
     Api.Utils.post_urls(body.urls, info)
   end
   def respond("/urls", info, res) do
-    info.msg |> set [:body], res.body
+    info.msg |> set([:body], res.body).()
   end
 
   @doc "return info extracted from a given url based on a Parsley parselet"
   def handle("/parse", info, %{url: url, parselet: parselet}) do
-    info_ = info |> set [:misc, :parselet], parselet
+    info_ = info |> set([:misc, :parselet], parselet).()
     Api.Utils.post_urls url, info_
   end
   def respond("/parse", info, res) do
     json = Api.Parsing.parse(res.body, info.misc.parselet)
-    info.msg |> set [:body], json
+    info.msg |> set([:body], json).()
   end
 
   @doc "fetch a URL using different combinations of the given request headers to analyze which affect results"
@@ -92,15 +92,15 @@ defmodule Api.RoomChannel do
     headers_without = Enum.map(hdrs, fn {k, _v} -> {"without #{k}", Map.delete(hdrs, k) } end)
     header_combs = [{"all", hdrs}, {"none", []}] ++ headers_without
     info = Enum.map(header_combs, fn({name, req_hdrs}) ->
-      info |> set([:msg, :body], %{name: name}) |> set([:req, :headers], req_hdrs)
+      info |> set([:msg, :body], %{name: name}).() |> set([:req, :headers], req_hdrs).()
     end)
     Api.Utils.post_urls body.urls, info
     # track what's left on client?
   end
   def respond("/check", info, res) do
     info.msg
-      |> set([:body, :status], res.status_code)
-      |> set([:body, :length], byte_size(res.body))
+      |> set([:body, :status], res.status_code).()
+      |> set([:body, :length], byte_size(res.body)).()
   end
 
   # customize/filter broadcasts

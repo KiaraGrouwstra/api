@@ -6,9 +6,9 @@ defmodule ThrottlerTest do
 
   def kill_throttlers() do
     Supervisor.which_children(:throttlers)
-    |> Enum.each fn({_,pid,_,_}) ->
+    |> Enum.each(fn({_,pid,_,_}) ->
       Supervisor.terminate_child(:throttlers, pid)
-    end
+    end)
   end
 
   setup do
