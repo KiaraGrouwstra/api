@@ -10,6 +10,7 @@ config :api, Api.Endpoint,
   root: Path.expand("..", __DIR__),
   secret_key_base: "/RjKJmMO6raXPRTq63qTqid1x6lVKTOP+FTxZHfX6Ogd+1xYmH6eZZFhBu1CIwtg",
   debug_errors: false,
+  check_origin: false,
   pubsub: [name: Api.PubSub,
            adapter: Phoenix.PubSub.PG2]
 
@@ -21,6 +22,3 @@ config :logger, :console,
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{Mix.env}.exs"
-
-config :phoenix, Phoenix.Transports.WebSocket,
-  check_origin: false

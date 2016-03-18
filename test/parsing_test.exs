@@ -55,7 +55,7 @@ defmodule ParsingTest do
 
   @tag :traffic
   test "parse - baidu" do
-    body = decode(fetch(@url, [])).body
+    body = decode(fetch!(@url, [])).body
     # %Porcelain.Result{status: 0, out: _out}
     out = parse(body, @parselet)
     # assert String.length(out) > 0
@@ -64,7 +64,7 @@ defmodule ParsingTest do
 
   @tag :traffic
   test "parse - taobao" do
-    body = decode(fetch("https://www.taobao.com/", [])).body
+    body = decode(fetch!("https://www.taobao.com/", [])).body
     # %Porcelain.Result{status: 0, out: _out}
     out = parse(body, @parselet)
     # assert String.length(out) > 0

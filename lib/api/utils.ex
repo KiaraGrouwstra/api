@@ -45,17 +45,30 @@ defmodule Api.Utils do
     # Logger.debug "fetch_handle(#{inspect({url, info})})"
     domain = info.misc.domain
     throttle(domain)
-    res = url
-    |> fetch(info.req.headers)
-    |> decode()
-    case res.status_code do
-      x when x in 300..399 -> # redirect
-        url = res.resp_headers[:Location]
-        Api.QueueStore.push(domain, {url, info})
-        # retry count?
-      x ->
+    Logger.debug "fetch: #{url}"
+    # res = url
+    # |> fetch(info.req.headers)
+    # |> decode()
+    case fetch(url, info.req.headers) do
+      {:err, e} ->
+        Logger.warn "#{e}"
+        # body = %{ error: e }
+        body = %{ error: e } |> Poison.encode!()
+        res = %{ body: body }
         Api.RoomChannel.respond(info.route, info, res)
         |> send_resp(info.user)
+      {:ok, enc} ->
+        res = decode(enc)
+        Logger.debug "#{res.status_code}: #{url}"
+        case res.status_code do
+          x when x in 300..399 -> # redirect
+            url = res.resp_headers[:Location]
+            Api.QueueStore.push(domain, {url, info})
+            # retry count?
+          x ->
+            Api.RoomChannel.respond(info.route, info, res)
+            |> send_resp(info.user)
+        end
     end
   end
 
@@ -115,15 +128,32 @@ defmodule Api.Utils do
 
   @doc "fetch a page, retrying on failure..."
   def fetch(url, req_headers, opts \\ []) do
+    time = :os.system_time()
     try do
-      HTTPotion.get url, Keyword.merge([headers: req_headers, timeout: 5_000], opts)
+      timeout = 10_000
+      resp = HTTPotion.get url, Keyword.merge([headers: req_headers, timeout: timeout], opts)
+      taken = (:os.system_time() - time) / 1_000_000_000
+      Logger.info "response after #{taken}s"
+      {:ok, resp}
     rescue
       e in HTTPotion.HTTPError ->
         Logger.info "httppotion error: #{e.message}"
-        Logger.info "retrying fetch for #{url}..."
-        :timer.sleep 1_000
-        fetch(url, req_headers)
+        case e.message do
+          "{:url_parsing_failed, {:error, :invalid_uri}}" -> # no point retrying
+            {:err, e.message}
+          # "req_timedout" ->
+          _ ->
+            taken = (:os.system_time() - time) / 1_000_000_000
+            Logger.info "error after #{taken}s: #{e.message}"
+            Logger.info "retrying fetch for #{url}..."
+            :timer.sleep 1_000
+            fetch(url, req_headers)
+        end
     end
+  end
+  def fetch!(url, req_headers, opts \\ []) do
+    {:ok, resp} = fetch(url, req_headers, opts)
+    resp
   end
 
   @doc "extract the domain from a URL"

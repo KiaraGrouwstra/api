@@ -24,7 +24,7 @@ defmodule UtilsTest do
   # test "post_urls" do
   #   post_urls(@url, [])
   #   assert Api.QueueStore.pop(@domain) == {:value, {@url, []}}
-  #   # can't really test it, as it's do more than ask -- it now already creates a queue handler that pops the URL off already.
+  #   # can't really test it, as it does more than ask -- it now already creates a queue handler that pops the URL off already.
   #   # uh, if the queues already existed it gets an :ok and doesn't create them. in this case test by popping back off instead?
   #   # assert num_throttlers() > 0
   #   # assert url_domain(@url) |> String.to_atom() |> Api.Throttler.get() == :ok
@@ -68,7 +68,8 @@ defmodule UtilsTest do
 
   @tag :traffic
   test "fetch" do
-    assert %HTTPotion.Response{} = fetch(@url, [])
+    assert {:ok, %HTTPotion.Response{}} = fetch(@url, [])
+    assert %HTTPotion.Response{} = fetch!(@url, [])
   end
 
   test "zip_duplicate" do
