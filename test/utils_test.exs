@@ -95,7 +95,7 @@ defmodule UtilsTest do
   end
 
   test "de_jsonp" do
-    html = "<p src=\\\"lol\\\" />"
+    html = "fn(\"<p src=\\\"lol\\\" />\")"
     assert de_jsonp(html) == "<p src=\"lol\" />"
   end
 

@@ -25,6 +25,9 @@ defmodule Api.Mixfile do
   # Type `mix help deps` for examples and options
   defp deps do
     [
+     {:cf, "~> 0.2.1", override: true}, # remove this later
+     {:erlware_commons, github: "erlware/erlware_commons", override: true}, # remove this later
+
      {:phoenix, ">= 1.0.0"},
      {:phoenix_html, ">= 2.1.0"},
      {:phoenix_live_reload, ">= 1.0.0", only: :dev},
@@ -42,7 +45,7 @@ defmodule Api.Mixfile do
     #  {:lens, github: "tycho01/erl-lenses", tag: "master"},   # shortening name, hax
      {:elins, github: "tycho01/elins", tag: "master"},
      {:fun, github: "tycho01/fun", tag: "master"},
-     {:floki, github: "philss/floki", tag: "master"}, # marianoguerra/qrly
+     {:floki, github: "tycho01/floki", tag: "master"}, # philss # marianoguerra/qrly
      {:porcelain, ">= 2.0.0"},
      {:kafka_ex, ">= 0.2.0"},
      {:amnesia, github: "meh/amnesia", tag: "master"},

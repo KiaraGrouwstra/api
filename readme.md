@@ -8,7 +8,6 @@ mix amnesia.create -db QueueDB --disk
 http://localhost:8000/_utils/
 
 TODO:
-- if I can implement inner_html on Floki, can I use a final @ for inner, @@ for outer html?
 - switch to promises to invert horrible callback architecture to something more functional
   - send completes too
 - switch to mutable queue allowing elixir objects without silly serialization

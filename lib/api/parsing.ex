@@ -35,15 +35,17 @@ defmodule Api.Parsing do
   # string
   def floki(body, str, is_arr \\ false) do # when is_string(selector)
     if String.contains?(str, "@") do
-      case String.split(str, "@") do
+      case String.split(str, "@", [parts: 2]) do
+        # @ (empty attribute): get the inner html
+        [sel, ""] ->
+          floki_match(body, sel, fn(el) -> Floki.inner_html(el) end, is_arr)
+        # @@: get the outer html
+        [sel, "@"] ->
+          floki_match(body, sel, fn(el) -> Floki.raw_html(el) end, is_arr)
         # otherwise get the @attribute
         [sel, attr] ->
           [match] = Floki.attribute(body, sel, attr)
           match
-        # for an empty attribute get the (outer) html
-        [sel] ->
-          floki_match body, sel, fn(el) -> Floki.raw_html(el) end, is_arr
-        # TODO: if I can implement inner_html on Floki, can I use a final @ for inner, @@ for outer html?
       end
     else
       # by default just grab the element text
