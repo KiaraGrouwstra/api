@@ -1,7 +1,8 @@
 mix deps.get
 mix phoenix.server
 
-mix amnesia.drop -db QueueDB
+# mix amnesia.drop -db QueueDB
+rm -rf Mnesia.nonode@nohost
 mix amnesia.create -db QueueDB --disk
 
 ./start-dev.sh

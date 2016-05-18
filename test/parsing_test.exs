@@ -4,6 +4,7 @@ defmodule ParsingTest do
   import Api.Utils
   import Api.Parsing
   import Elins
+  require Logger
 
   @url "https://www.baidu.com/"
   @html "<html><head><title>hi</title></head><body><p class=\"text\">foo</p></body></html>"
@@ -12,14 +13,17 @@ defmodule ParsingTest do
   @parselet %{header: "title", p: "p"} |> Poison.encode!
   @will_throw %{header: "title", p: "p", "img": "not_there"} |> Poison.encode!
   @optional %{header: "title", p: "p", "img?": "not_there"} |> Poison.encode!
+  @table_global %{"words": [ %{ p: "p" } ] } |> Poison.encode!
   @table %{"words(body)": [ %{ p: "p" } ] } |> Poison.encode!
-  @table_optional %{"words(body)": [ %{ p: "p", "img?": "not_there" } ] } |> Poison.encode!
+  @table_optional %{"words(body)": [ %{ p: "p", "img?": ".not_there" } ] } |> Poison.encode!
   @table_empty %{"words(body)": [ %{ "pic?": "img" } ] } |> Poison.encode!
   @html_sel "<html><body><table><td>foo</td><tr><td>bar</td><td>baz</td></tr><tr><td>cow</td></tr><tr></tr></table></body></html>"
   @json_sel %{ "words(tr)": [ %{ "item?": "td" } ] } |> Poison.encode!()
   @outer %{header: "title@@"} |> Poison.encode!
   @inner %{header: "head@"} |> Poison.encode!
   @attr %{attr: "p@class"} |> Poison.encode!
+  # @tb_items %{ "items(.item)" => [ %{ "price?" => ".price", "bought?" => ".deal-cnt", "desc?" => ".J_ClickStat" } ] } |> Poison.encode!
+  @tb_items %{ "items(.item)" => [ %{ "price" => ".price" } ] } |> Poison.encode!
 
   test "parse - simple" do
     # %Porcelain.Result{status: 0, out: out}
@@ -38,6 +42,11 @@ defmodule ParsingTest do
 
   test "parse - table" do
     out = parse(@html, @table)
+    assert out |> to_atoms() == %{ words: [ %{ p: "foo" } ] }
+  end
+
+  test "parse - table (array not pinned to body)" do
+    out = parse(@html, @table_global)
     assert out |> to_atoms() == %{ words: [ %{ p: "foo" } ] }
   end
 
@@ -87,6 +96,17 @@ defmodule ParsingTest do
     out = parse(body, @parselet)
     # assert String.length(out) > 0
     assert out["header"] |> String.length() > 0
+  end
+
+  # crap, I see why this fails, Taobao doesn't actually return the final HTML, but has most of this in freaky binary JSON...
+  @tag :traffic
+  test "parse - taobao - items" do
+    body = decode(fetch!("https://s.taobao.com/search?q=3ds", [])).body
+    out = parse(body, @tb_items)
+    # Logger.info out
+    IO.puts out
+    # assert String.length(out) > 0
+    assert out["items"] |> String.length() > 0
   end
 
 end

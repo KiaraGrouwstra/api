@@ -3,7 +3,7 @@ defmodule UtilsTest do
   ExUnit.configure(exclude: [traffic: true])
   use ExUnit.Case, async: false
   import Api.Utils
-  import Elins
+  # import Elins
 
   @url "https://www.baidu.com/"
   @domain "baidu.com"

@@ -3,8 +3,8 @@ Code.require_file "./support/websocket_client.exs", __DIR__
 
 defmodule IntegrationTest do
   use ExUnit.Case, async: false
-  import Api.RoomChannel
-  require Elins
+  # import Api.RoomChannel
+  # require Elins
   alias Phoenix.Integration.WebsocketClient
 
   @port 8080 #34055 #80 #8080 #5807
@@ -36,8 +36,8 @@ defmodule IntegrationTest do
 
   defp socket_send(msg \\ @msg, route \\ "", room \\ @room) do
     {:ok, sock} = WebsocketClient.start_link(self, "ws://127.0.0.1:8080/socket/websocket") #"ws://localhost:#{@port}/socket") # 127.0.0.1  #ws_url()
-    WebsocketClient.join(sock, @room, %{"user" => "tycho"})
-    WebsocketClient.send_event(sock, @room, route, msg)
+    WebsocketClient.join(sock, room, %{"user" => "tycho"})
+    WebsocketClient.send_event(sock, room, route, msg)
     # WebsocketClient.close(sock)
   end
 

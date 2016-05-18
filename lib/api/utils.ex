@@ -115,7 +115,10 @@ defmodule Api.Utils do
           {:error, :eilseq} ->
             Logger.warn "DECODING ERROR"
             enc_body
-          {:ok, b} -> b
+          {:ok, b} ->
+            Logger.debug "unencoded body: #{b}"
+            IO.puts "unencoded body: #{b}"
+            b
         end
       end
     rescue
@@ -183,7 +186,7 @@ defmodule Api.Utils do
     end
   end
 
-  @doc "duplicates non-lists then zips -- zip only does n:n; '<-' cartesians lists so n:1/1:n; this does both."
+  @doc "duplicates non-lists then zips -- zip only does n:n; '<-' cartesians lists do n:1/1:n; this does both."
   # does this beat using <- to duplicate non-lists in the room_channel functions?
   def zip_duplicate(a, b) when is_list(a) and is_list(b) do
     Enum.zip(a,b)

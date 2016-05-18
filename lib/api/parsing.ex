@@ -38,10 +38,10 @@ defmodule Api.Parsing do
       case String.split(str, "@", [parts: 2]) do
         # @ (empty attribute): get the inner html
         [sel, ""] ->
-          floki_match(body, sel, fn(el) -> Floki.inner_html(el) end, is_arr)
+          floki_match(body, sel, is_arr, fn(el) -> Floki.inner_html(el) end)
         # @@: get the outer html
         [sel, "@"] ->
-          floki_match(body, sel, fn(el) -> Floki.raw_html(el) end, is_arr)
+          floki_match(body, sel, is_arr, fn(el) -> Floki.raw_html(el) end)
         # otherwise get the @attribute
         [sel, attr] ->
           [match] = Floki.attribute(body, sel, attr)
@@ -49,12 +49,12 @@ defmodule Api.Parsing do
       end
     else
       # by default just grab the element text
-      floki_match body, str, fn(el) -> Floki.text(el) end, is_arr
+      floki_match body, str, is_arr, fn(el) -> Floki.text(el) end
     end
   end
 
   @doc "get/transform the match for a selector"
-  def floki_match(el, sel, fun \\ &(&1), is_arr \\ false) do
+  def floki_match(el, sel, is_arr \\ false, fun \\ &(&1)) do
     res = Floki.find(el, sel)
     if is_arr do
       res |> Enum.map(fun.())
@@ -63,7 +63,8 @@ defmodule Api.Parsing do
         # [] -> nil # if optional # nope, I'm handling this in floki_element_prep, since rescuing at an intermediate level allows bubbling it up
         # [] -> throw "floki selector #{sel} failed!"
         [] -> raise SelectorError, message: "floki selector #{sel} failed!\n\n#{el}\n\nfloki selector #{sel} failed!"
-        list -> List.first(list) |> fun.()
+        list when is_list(list) -> List.first(list) |> fun.()
+        _ -> raise SelectorError, message: "what is this result?"
       end
     end
   end
@@ -86,15 +87,36 @@ defmodule Api.Parsing do
   @doc "transform a key-value pair into its extracted result"
   # map
   def floki_element({k, [map]}, body) when is_map(map) do  # when is_list(v)
-    {arr_name, selector} = case Regex.run(~r/([\w_]+)\((.+)\)/, k) do
-      [_k, a, b] -> {a, b}
-      _ -> throw "bad array key #{k}!"
+    case Regex.run(~r/([\w_]+)\((.+)\)/, k) do
+      [_k, a, b] -> # "items(.item)": [{}]
+        {arr_name, selector} = {a, b}
+        arr = Floki.find(body, selector)
+          |> Enum.map(fn(elem) ->
+            elem |> Floki.raw_html |> floki(map)
+          end)
+        {arr_name, arr}
+      _ -> # "items": [{}]
+        # throw "bad array key `#{k}`!"
+        # wait, to allow this case I should grab all results for each selector in `map`
+        mapOfArrs = map
+        |> Enum.map((fn({key, sel}) -> { key,
+          floki_match(body, sel, true)
+        } end))
+        |> Enum.into(%{})
+        keys = Map.keys(mapOfArrs)
+        arr = mapOfArrs
+        |> Enum.map(fn({k,v}) -> v end)
+        # then zip them...
+        # this native zip is naive, truncating all arrays to the size of the shortest!
+        # zip source [here](https://github.com/elixir-lang/elixir/blob/v1.2.4/lib/elixir/lib/list.ex#L709), if I dare to do better...
+        |> List.zip()
+        |> Enum.map(fn(tpl) ->
+          lst = Tuple.to_list(tpl)
+          Enum.zip(keys, lst)
+          |> Enum.into(%{})
+        end)
+        {k, arr}
     end
-    arr = Floki.find(body, selector)
-      |> Enum.map(fn(elem) ->
-        elem |> Floki.raw_html |> floki(map)
-      end)
-    {arr_name, arr}
   end
   # array
   def floki_element({k,[v]}, body) do

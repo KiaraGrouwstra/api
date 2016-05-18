@@ -67,7 +67,6 @@ defmodule Api.RoomChannel do
     {:reply, :ok, socket}
   end
 
-  # this function handles multiple URLs, yet it's responding like to a single request (RESP)... too bad I can't complete array requests.
   @doc "fetch a URL and return its body"
   def handle("/urls", info, body) do
     Api.Utils.post_urls(body.urls, info)
@@ -77,9 +76,9 @@ defmodule Api.RoomChannel do
   end
 
   @doc "return info extracted from a given url based on a Parsley parselet"
-  def handle("/parse", info, %{url: url, parselet: parselet}) do
+  def handle("/parse", info, %{urls: urls, parselet: parselet}) do
     info_ = info |> set([:misc, :parselet], parselet).()
-    Api.Utils.post_urls url, info_
+    Api.Utils.post_urls urls, info_
   end
   def respond("/parse", info, res) do
     json = Api.Parsing.parse(res.body, info.misc.parselet)
