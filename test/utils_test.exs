@@ -33,7 +33,7 @@ defmodule UtilsTest do
   test "handle_domain" do
     handle_domain(@domain)
     # assert num_throttlers() > 0
-    assert throttle(@domain) == :ok
+    assert throttle({ :str, @domain }) == :ok
   end
 
   test "make_fetcher" do
@@ -47,7 +47,7 @@ defmodule UtilsTest do
 
   test "throttle" do
     {:ok, _pid} = make_throttler(@domain)
-    assert throttle(@domain) == :ok
+    assert throttle({ :str, @domain }) == :ok
   end
 
   # @tag :websocket

@@ -44,8 +44,10 @@ defmodule Api.Utils do
   def fetch_handle({url, info}) do
     # Logger.debug "fetch_handle(#{inspect({url, info})})"
     domain = info.misc.domain
-    throttle(domain)
-    Logger.debug "fetch: #{url}"
+    # throttle({ :str, domain })
+    pid = assert_domain(domain)
+    throttle({ :id, pid })
+    Logger.info "fetch: #{url}"
     # res = url
     # |> fetch(info.req.headers)
     # |> decode()
@@ -59,10 +61,12 @@ defmodule Api.Utils do
         |> send_resp(info.user)
       {:ok, enc} ->
         res = decode(enc)
-        Logger.debug "#{res.status_code}: #{url}"
+        Logger.info "#{res.status_code}: #{url}"
         case res.status_code do
           x when x in 300..399 -> # redirect
-            url = res.resp_headers[:Location]
+            url = res.headers[:Location]
+            Logger.debug "redirect: #{url}"
+            Logger.info "domain: #{domain}"
             Api.QueueStore.push(domain, {url, info})
             # retry count?
           x ->
@@ -87,13 +91,26 @@ defmodule Api.Utils do
     end
   end
 
+  @doc "ensures the existence of handler processes for a domain -- also returning the pid of the throttler"
+  def assert_domain(domain) do
+    case GenServer.whereis(domain |> String.to_atom()) do
+      pid -> pid
+      nil ->
+        {:ok, pid} = handle_domain(domain)
+        pid
+    end
+  end
+
   ########## FUNCTIONAL ###############################
 
   @doc "throttle a fetch request for the given domain"
-  def throttle(domain) do
+  def throttle({ :str, domain }) do
     Logger.debug "throttle(#{domain})"
-    # :ok = Api.Throttler.get(domain |> String.to_atom())
-    :ok = GenServer.call(domain |> String.to_atom(), :get, 5_000)
+    throttle({ :id, domain |> String.to_atom() })
+  end
+  def throttle({ :id, atomOrPid }) do
+    # :ok = Api.Throttler.get(atomOrPid)
+    :ok = GenServer.call(atomOrPid, :get, 5_000)
     # ^ might need to set the timeout to inf...
   end
 

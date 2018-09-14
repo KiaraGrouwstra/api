@@ -16,7 +16,7 @@ defmodule Api do
     # strategies: http://elixir-lang.org/docs/stable/elixir/Supervisor.html
     opts = [strategy: :one_for_one, name: Api.Supervisor]
     sup = Supervisor.start_link(children, opts)
-    init()  # is this the right place?
+    init()  # is this the right place? now also called in tests.
     sup
   end
 

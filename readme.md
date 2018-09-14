@@ -9,6 +9,7 @@ mix amnesia.create -db QueueDB --disk
 http://localhost:8000/_utils/
 
 TODO:
+- fix bug causing fetch to only happen after server restart
 - switch to promises to invert horrible callback architecture to something more functional
   - send completes too
 - switch to mutable queue allowing elixir objects without silly serialization
@@ -22,3 +23,4 @@ TODO:
 - throttler: how should the blocking work with GenServer's standard 5s timeout?
 - ditch Phoenix
 - distribute
+- ditch handlers for empty domain queues? should work on a failed pop -- no free fetch credit loophole.

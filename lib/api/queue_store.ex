@@ -10,9 +10,12 @@ defmodule Api.QueueStore do
   # Api.QueueStore.push(domain, item)
   @doc "push an item to the stack"
   def push(item, domain) do
-    Logger.debug "push(#{inspect({domain})})" # item,
+    Logger.debug "push(#{inspect(domain)})" # { item, }
     {status, queue} = get_queue(domain)
+    Logger.debug "status: #{status}"
+    # Logger.debug "queue: #{queue}"
     q2 = :queue.in(item, queue)
+    # Logger.debug "q2: #{q2}"
     set_queue(domain, q2)
     status
   end
@@ -20,7 +23,7 @@ defmodule Api.QueueStore do
   # item = Api.QueueStore.pop(domain)
   @doc "try popping an item off the stack"
   def pop(domain) do
-    # Logger.debug "pop(#{domain})"
+    Logger.debug "pop(#{domain})"
     {_status, queue} = get_queue(domain)
     {out, q2} = :queue.out(queue)
     set_queue(domain, q2)
@@ -29,6 +32,7 @@ defmodule Api.QueueStore do
 
   @doc "initializes a (new or existing) domain to an empty queue"
   def init(domain) do
+    Logger.debug "init(#{domain})"
     queue = :queue.new()
     Amnesia.transaction do
       Queue.write(%Queue{ domain: domain, queue: queue })
@@ -38,6 +42,7 @@ defmodule Api.QueueStore do
 
   @doc "deletes the queue for a domain"
   def delete(domain) do
+    Logger.debug "delete(#{domain})"
     Amnesia.transaction do
       Queue.delete(domain)
     end
@@ -53,11 +58,12 @@ defmodule Api.QueueStore do
   end
 
   defp get_queue(domain) do
-    # Logger.debug "get_queue(#{domain})"
+    Logger.debug "get_queue(#{domain})"
     Amnesia.transaction do
       res = Queue.read(domain)
       case res do
         nil -> # new domain!
+          Logger.debug "new domain!"
           {:created, init(domain)}
         %QueueDB.Queue{queue: queue} ->
           {:ok, queue}
@@ -75,13 +81,14 @@ defmodule Api.QueueStore do
 
   @doc "consume a queue and handle it"
   def consume_queue(domain, fun) do
+    Logger.debug "consume_queue(#{domain})"
     case pop(domain) do
       :empty ->
-        # Logger.debug "empty: #{domain}"
+        Logger.debug "empty: #{domain}"
         :timer.sleep(1_000)
         # arbitrary; alternative: ditch domain at say x credits
       {:value, item} ->
-        # Logger.debug "consuming: #{inspect(item)}"
+        Logger.debug "consuming: #{inspect(item)}"
         fun.(item)
     end
     consume_queue(domain, fun)
